@@ -9,8 +9,8 @@ import (
 
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	greetrepo "github.com/iamsumit/example-go-kit/internal/repository/greeter"
 	"github.com/iamsumit/example-go-kit/internal/service/greeter"
-	greetstore "github.com/iamsumit/example-go-kit/internal/service/greeter/store"
 	"github.com/iamsumit/example-go-kit/pkg/api"
 )
 
@@ -21,10 +21,11 @@ type ErrorResponse struct {
 }
 
 func main() {
-	// greet store
-	g := greetstore.New()
+	// greet repository
+	greetRepo := greetrepo.New()
+	greetService := greeter.NewService(greetRepo)
 	r := mux.NewRouter()
-	ge := greeter.MakeEndpoints(g)
+	ge := greeter.MakeEndpoints(greetService)
 
 	r.Methods("GET").Path("/greet/{message}").Handler(httptransport.NewServer(
 		ge.Greet,
