@@ -1,20 +1,17 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	kitlog "github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	"github.com/iamsumit/example-go-kit/internal/service/greeter"
 	greetstore "github.com/iamsumit/example-go-kit/internal/service/greeter/store"
+	"github.com/iamsumit/example-go-kit/pkg/api"
 )
 
 type ErrorResponse struct {
@@ -26,23 +23,14 @@ type ErrorResponse struct {
 func main() {
 	// greet store
 	g := greetstore.New()
-
 	r := mux.NewRouter()
-
-	options := []httptransport.ServerOption{
-		httptransport.ServerErrorEncoder(
-			func(ctx context.Context, err error, w http.ResponseWriter) {
-				kitlog.NewLogfmtLogger(os.Stderr).Log("error", err.Error())
-				EncodeResponse(ctx, w, err)
-			},
-		),
-	}
+	ge := greeter.MakeEndpoints(g)
 
 	r.Methods("GET").Path("/greet/{message}").Handler(httptransport.NewServer(
-		greeter.Greet(g),
+		ge.Greet,
 		greeter.Decode,
-		EncodeResponse,
-		options...,
+		api.EncodeResponse,
+		api.ServerOptions()...,
 	))
 
 	// Start the HTTP server in a separate goroutine
@@ -59,28 +47,4 @@ func main() {
 	<-stop
 
 	log.Println("Shutting down gracefully...")
-}
-
-func EncodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	fmt.Printf("response: %v", response)
-	if e, ok := response.(error); ok {
-		// Not a Go kit transport error, but a business-logic error.
-		// Provide those as HTTP errors.
-		encodeError(ctx, e, w)
-		return nil
-	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	return json.NewEncoder(w).Encode(response)
-}
-
-func encodeError(_ context.Context, err error, w http.ResponseWriter) {
-	if err == nil {
-		panic("encodeError with nil error")
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusBadRequest)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"error": err.Error(),
-	})
 }

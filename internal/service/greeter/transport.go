@@ -8,10 +8,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type ReqGreet struct {
-	Message string `json:"message"`
-}
-
 func Decode(_ context.Context, r *http.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	msg, ok := vars["message"]
